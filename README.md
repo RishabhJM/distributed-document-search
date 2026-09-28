@@ -2,6 +2,8 @@
 
 A multi-tenant full-text document search platform engineered for **10M+ documents**, **sub-500ms p95 latency**, **1,000+ searches/second**, and strict **tenant data isolation**.
 
+> 🚀 **Looking to run and test immediately?** See [**`RUN.md`**](RUN.md) for complete copy-paste commands, preflight checks, test execution, and a 5-minute verification walkthrough.
+
 ---
 
 ## 1. System Architecture

@@ -1,6 +1,6 @@
 # How to Run and Test the Distributed Document Search Service
 
-This guide provides step-by-step instructions to run, seed, test, and evaluate the Distributed Multi-Tenant Document Search Service.
+This guide provides step-by-step instructions to run, seed, test, and evaluate the Distributed Multi-Tenant Document Search Service. For an exhaustive architectural walkthrough with sequence diagrams for all user and system flows, refer to [**`docs/ARCHITECTURE_REVIEW.md`**](docs/ARCHITECTURE_REVIEW.md).
 
 ---
 

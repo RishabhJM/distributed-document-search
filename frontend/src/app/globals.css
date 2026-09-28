@@ -3,22 +3,44 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  --background: #09090b;
+  --foreground: #fafafa;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom highlight styling for BM25 search terms */
+/* Subtle, refined highlight for BM25 matching terms (avoiding oversaturated AI yellow) */
 em {
-  background-color: rgba(245, 158, 11, 0.25);
-  color: #fbbf24;
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #fde68a;
+  border-bottom: 1.5px solid rgba(245, 158, 11, 0.4);
   font-style: normal;
-  font-weight: 600;
-  padding: 0.1rem 0.25rem;
-  border-radius: 0.25rem;
+  font-weight: 500;
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.2rem;
+}
+
+/* Minimalist scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
 }

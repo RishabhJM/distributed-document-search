@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/search", "/api/v1/search"})
+@RequestMapping({"/search", "/api/v1/search", "/documents/search"})
 public class SearchController {
 
     private final SearchService searchService;

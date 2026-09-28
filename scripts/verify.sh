@@ -9,7 +9,7 @@ echo "================================================================="
 
 # 1. Health check
 echo -n "1. Checking service health... "
-HEALTH_STATUS=$(curl -s "$API_URL/health" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+HEALTH_STATUS=$(curl -s "$API_URL/health" | grep -o '"status":"[^"]*' | head -n 1 | cut -d'"' -f4)
 if [ "$HEALTH_STATUS" = "UP" ] || [ "$HEALTH_STATUS" = "DEGRADED" ]; then
     echo "✓ PASS (Status: $HEALTH_STATUS)"
 else

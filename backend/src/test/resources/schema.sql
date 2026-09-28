@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS outbox_events (
     tenant_id VARCHAR(64) NOT NULL,
     document_id UUID NOT NULL,
     event_type VARCHAR(32) NOT NULL,
-    payload TEXT NOT NULL,
+    payload JSON NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
     attempts INT NOT NULL DEFAULT 0,
     last_error TEXT,

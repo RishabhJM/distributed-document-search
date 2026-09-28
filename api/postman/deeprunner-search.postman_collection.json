@@ -1,0 +1,112 @@
+{
+  "info": {
+    "_postman_id": "b78b0e8c-87d2-43bb-a5a1-778899aabbcc",
+    "name": "DeepRunner Distributed Document Search API",
+    "description": "Postman Collection for Distributed Multi-Tenant Document Search Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Index Document",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Tenant-ID", "value": "{{tenantId}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"externalId\": \"postman-01\",\n  \"title\": \"Q3 payroll runbook\",\n  \"content\": \"Steps for the quarterly payroll batch processing with direct deposit reconciliation.\",\n  \"author\": \"finance-lead\",\n  \"tags\": [\"payroll\", \"finance\", \"runbook\"],\n  \"contentType\": \"text/plain\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/documents",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents"]
+        }
+      }
+    },
+    {
+      "name": "Bulk Index Documents",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Tenant-ID", "value": "{{tenantId}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documents\": [\n    {\n      \"title\": \"Doc 1\",\n      \"content\": \"First batch document\",\n      \"tags\": [\"batch\"]\n    },\n    {\n      \"title\": \"Doc 2\",\n      \"content\": \"Second batch document\",\n      \"tags\": [\"batch\"]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/documents/_bulk",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "_bulk"]
+        }
+      }
+    },
+    {
+      "name": "Search Documents",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenantId}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/search?q=payroll&highlight=true&fuzzy=false",
+          "host": ["{{baseUrl}}"],
+          "path": ["search"],
+          "query": [
+            { "key": "q", "value": "payroll" },
+            { "key": "highlight", "value": "true" },
+            { "key": "fuzzy", "value": "false" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Document by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenantId}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/{{docId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "{{docId}}"]
+        }
+      }
+    },
+    {
+      "name": "Delete Document by ID",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenantId}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/documents/{{docId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["documents", "{{docId}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "tenantId", "value": "acme" },
+    { "key": "docId", "value": "" }
+  ]
+}

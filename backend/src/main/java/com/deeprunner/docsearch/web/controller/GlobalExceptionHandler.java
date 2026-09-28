@@ -1,6 +1,6 @@
 package com.deeprunner.docsearch.web.controller;
 
-import com.deeprunner.docsearch.context.RequestContextFilter;
+import com.deeprunner.docsearch.context.AppRequestContextFilter;
 import com.deeprunner.docsearch.domain.dto.ProblemDetailsDto;
 import com.deeprunner.docsearch.web.exception.RateLimitExceededException;
 import com.deeprunner.docsearch.web.exception.ResourceNotFoundException;
@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ProblemDetailsDto> handleNotFound(ResourceNotFoundException ex) {
-        String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         ProblemDetailsDto problem = ProblemDetailsDto.of(
             "not-found",
             "Resource Not Found",
@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TenantException.class)
     public ResponseEntity<ProblemDetailsDto> handleTenantException(TenantException ex) {
-        String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         ProblemDetailsDto problem = ProblemDetailsDto.of(
             "tenant-error",
             "Tenant Authorization Error",
@@ -59,7 +59,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ProblemDetailsDto> handleRateLimit(RateLimitExceededException ex) {
-        String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         ProblemDetailsDto problem = ProblemDetailsDto.rateLimit(
             ex.getRetryAfterSeconds(),
             ex.getMessage(),
@@ -73,7 +73,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SearchUnavailableException.class)
     public ResponseEntity<ProblemDetailsDto> handleSearchUnavailable(SearchUnavailableException ex) {
-        String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         ProblemDetailsDto problem = new ProblemDetailsDto(
             "https://docsearch.deeprunner.com/errors/search-unavailable",
             "Search Service Unavailable",
@@ -92,7 +92,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetailsDto> handleValidation(MethodArgumentNotValidException ex) {
-        String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         String validationErrors = ex.getBindingResult().getFieldErrors().stream()
             .map(FieldError::getDefaultMessage)
             .collect(Collectors.joining("; "));
@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetailsDto> handleGeneric(Exception ex) {
-        String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         log.error("Unhandled exception for request {}", requestId, ex);
 
         // Security: NEVER expose stack traces or internal implementation details

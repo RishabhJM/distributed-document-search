@@ -32,7 +32,7 @@ A multi-tenant full-text document search platform engineered for **10M+ document
      │ Boot 3    │          │           │           │           │   scalable
      └─────┬─────┘          └─────┬─────┘           └─────┬─────┘
            │  Per-request filter chain (Order is the security boundary)
-           │    5  RequestContextFilter   requestId → MDC
+           │    5  AppRequestContextFilter requestId → MDC
            │   10  TenantResolutionFilter validate tenant — FAILS CLOSED
            │   20  RateLimitFilter        per-tenant token bucket
            └──────────┬───────────────┬──────────────────┬──────────────┐

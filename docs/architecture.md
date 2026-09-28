@@ -30,7 +30,7 @@
      │ Boot 3    │          │           │           │           │   scalable
      └─────┬─────┘          └─────┬─────┘           └─────┬─────┘
            │  per-request filter chain (order is the security boundary)
-           │    5  RequestContextFilter   requestId → MDC
+           │    5  AppRequestContextFilter requestId → MDC
            │   10  TenantResolutionFilter validate tenant — FAILS CLOSED
            │   20  RateLimitFilter        per-tenant token bucket
            └──────────┬───────────────┬──────────────────┬──────────────┐

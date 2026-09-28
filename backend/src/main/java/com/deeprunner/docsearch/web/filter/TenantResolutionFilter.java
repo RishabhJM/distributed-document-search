@@ -1,6 +1,6 @@
 package com.deeprunner.docsearch.web.filter;
 
-import com.deeprunner.docsearch.context.RequestContextFilter;
+import com.deeprunner.docsearch.context.AppRequestContextFilter;
 import com.deeprunner.docsearch.context.TenantContext;
 import com.deeprunner.docsearch.domain.dto.ProblemDetailsDto;
 import com.deeprunner.docsearch.domain.dto.TenantDto;
@@ -51,9 +51,9 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String requestId = (String) request.getAttribute(RequestContextFilter.MDC_REQUEST_ID_KEY);
+        String requestId = (String) request.getAttribute(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         if (requestId == null) {
-            requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+            requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
         }
 
         String tenantHeader = request.getHeader(TENANT_HEADER);

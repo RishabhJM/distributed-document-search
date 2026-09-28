@@ -1,6 +1,6 @@
 package com.deeprunner.docsearch.web.filter;
 
-import com.deeprunner.docsearch.context.RequestContextFilter;
+import com.deeprunner.docsearch.context.AppRequestContextFilter;
 import com.deeprunner.docsearch.context.TenantContext;
 import com.deeprunner.docsearch.domain.dto.ProblemDetailsDto;
 import com.deeprunner.docsearch.domain.dto.TenantDto;
@@ -76,7 +76,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             response.setContentType("application/problem+json");
             response.setCharacterEncoding("UTF-8");
 
-            String requestId = MDC.get(RequestContextFilter.MDC_REQUEST_ID_KEY);
+            String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
             ProblemDetailsDto problem = ProblemDetailsDto.rateLimit(
                 (int) Math.max(1, result.resetSeconds()),
                 "Tenant '" + tenantId + "' exceeded " + quota + " requests/second.",

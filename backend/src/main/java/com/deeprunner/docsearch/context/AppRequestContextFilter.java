@@ -16,10 +16,11 @@ import java.util.UUID;
 /**
  * Filter 5 in the per-request filter chain.
  * Extracts or generates X-Request-Id and binds it to SLF4J MDC and HTTP response headers.
+ * Explicitly named "appRequestContextFilter" to avoid bean collision with Spring MVC's auto-configured requestContextFilter bean.
  */
-@Component
+@Component("appRequestContextFilter")
 @Order(Ordered.HIGHEST_PRECEDENCE + 5)
-public class RequestContextFilter extends OncePerRequestFilter {
+public class AppRequestContextFilter extends OncePerRequestFilter {
 
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
     public static final String MDC_REQUEST_ID_KEY = "requestId";

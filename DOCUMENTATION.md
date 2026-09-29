@@ -69,7 +69,7 @@ The assignment asks candidates to design and implement a prototype of a **Distri
 | **Deliverable 1: Architecture Design Document** (2–3 pages max) | • High-level system architecture diagram showing all major components<br>• Data flow diagram for indexing and search operations<br>• Database/storage strategy (search engine, database, cache layers)<br>• API design with key endpoints and contract examples<br>• Consistency model and trade-offs<br>• Caching strategy across different layers<br>• Message queue usage for asynchronous operations<br>• Multi-tenancy approach and data isolation strategy | [**`DOCUMENTATION.md` Section 1**](#1-architecture-design-document)<br>• High-level diagram: §1.1<br>• Ingestion data flow: §1.2<br>• Search data flow: §1.3<br>• Storage strategy: §1.4<br>• API contracts: §1.5<br>• Consistency model: §1.6<br>• Multi-layer cache: §1.7<br>• Outbox & Kafka: §1.8<br>• Multi-tenancy & isolation: §1.9<br>• Deep-dive flows: [**`docs/ARCHITECTURE_REVIEW.md`**](docs/ARCHITECTURE_REVIEW.md) | Architectural diagrams, RFC 7807 problem details, fail-closed security assertions, and 6 Architectural Decision Records ([**`docs/adr/`**](docs/adr/)). |
 | **Deliverable 2: Working Prototype** | • REST API with `POST /documents`, `GET /search?q={query}&tenant={tenantId}`, `GET /documents/{id}`, `DELETE /documents/{id}`<br>• Basic multi-tenant support (header or path-based)<br>• Search functionality (OpenSearch / Elasticsearch / PostgreSQL FTS)<br>• Simple caching layer (Redis, in-memory)<br>• Basic rate limiting per tenant<br>• Health check endpoint with dependency status<br>• Docker-compose setup encouraged | • Core Controllers: [`DocumentController.java`](backend/src/main/java/com/deeprunner/docsearch/web/controller/DocumentController.java), [`SearchController.java`](backend/src/main/java/com/deeprunner/docsearch/web/controller/SearchController.java)<br>• Health endpoint: [`HealthController.java`](backend/src/main/java/com/deeprunner/docsearch/web/controller/HealthController.java)<br>• Multi-tenant filter: [`TenantResolutionFilter.java`](backend/src/main/java/com/deeprunner/docsearch/web/filter/TenantResolutionFilter.java)<br>• Search adapter: [`OpenSearchAdapter.java`](backend/src/main/java/com/deeprunner/docsearch/search/OpenSearchAdapter.java)<br>• Cache & Rate limiter: [`RedisRateLimiter.java`](backend/src/main/java/com/deeprunner/docsearch/service/RedisRateLimiter.java)<br>• Docker compose: [`docker-compose.yml`](docker-compose.yml)<br>• Web UI: [`frontend/`](frontend/) | • `mvn test`: 18/18 tests pass.<br>• Automated verification: [`scripts/verify.sh`](scripts/verify.sh) (6/6 pass).<br>• Interactive curl: [`api/curl/requests.sh`](api/curl/requests.sh) (9/9 pass).<br>• ArchUnit tests: [`ArchitectureTest.java`](backend/src/test/java/com/deeprunner/docsearch/architecture/ArchitectureTest.java). |
 | **Deliverable 3: Production Readiness Analysis** | • Scalability: How to handle 100x growth (documents & traffic)<br>• Resilience: Circuit breakers, retry strategies, failover mechanisms<br>• Security: AuthN/AuthZ, encryption at rest/transit, API security<br>• Observability: Metrics, logging, distributed tracing strategy<br>• Performance: Database optimization, index management, query optimization<br>• Operations: Deployment strategy, zero-downtime updates, backup/recovery<br>• SLA Considerations: How to achieve 99.95% availability | [**`DOCUMENTATION.md` Section 2**](#2-production-readiness-analysis)<br>• 100x scale math & bottlenecks: §2.1<br>• Circuit breakers & retries: §2.2<br>• Security & RLS: §2.3<br>• Observability & tracing: §2.4<br>• 500ms p95 latency budget: §2.5<br>• Zero-downtime & RPO/RTO: §2.6<br>• 99.95% SLA derivation: §2.7 | Quantitative capacity formulas (1B docs = 140 shards / 14 data nodes), 500ms latency budget allocation table, and monthly downtime budget arithmetic (21.6 min/mo). |
-| **Deliverable 4: Enterprise Experience Showcase** | • A similar distributed system built and its scale/impact<br>• A performance optimization that resulted in significant improvements<br>• A critical production incident resolved in a distributed system<br>• An architectural decision made that balanced competing concerns | [**`DOCUMENTATION.md` Section 3**](#3-enterprise-experience-showcase)<br>• Similar system: §3.1 (120M docs/day, 1,800 qps, $3.2M ACV)<br>• Performance optimization: §3.2 (`async-profiler`, outbox vacuum, `SKIP LOCKED`, CPU 92% → 18%)<br>• Critical incident: §3.3 (SEV-1 Redis timeout cascade & fail-open fix)<br>• Architectural decision: §3.4 (Shared index vs dedicated index)<br>• Traceability to prototype: §3.5 | Real-world engineering case studies with explicit traceability to implementation patterns used in this codebase. |
+| **Deliverable 4: Enterprise Experience Showcase** | • A similar distributed system built and its scale/impact<br>• A performance optimization that resulted in significant improvements<br>• A critical production incident resolved in a distributed system<br>• An architectural decision made that balanced competing concerns | [**`DOCUMENTATION.md` Section 3**](#3-enterprise-experience-showcase)<br>• Similar system: §3.1 (UKG AuthN migration platform for 80,000+ enterprise customers, Kafka request-reply, 99.9% reliability)<br>• Performance optimization: §3.2 (Migration operations automation: 90% manual effort reduction, hours to minutes)<br>• Critical incident: §3.3 (Kubernetes rolling restart race condition resolved via shared Redis-backed state)<br>• Architectural decision: §3.4 (Shared Redis-backed state vs in-memory vs relational DB for transient event replies)<br>• Traceability to prototype: §3.5 | Real-world engineering case studies from UKG enterprise identity platforms with explicit traceability to patterns used in this codebase. |
 | **Submission Guidelines** | 1. Use AI Tools (Brief note on AI tool usage)<br>2. Code Repository: Clear README, docker-compose, sample API requests, architecture diagrams<br>3. Documentation: Single PDF or Markdown file containing Architecture design, Production readiness, Experience showcase, AI note | • AI tool usage note: [**`DOCUMENTATION.md` Section 4**](#4-brief-note-on-ai-tool-usage)<br>• Master README: [**`README.md`**](README.md)<br>• Docker compose: [`docker-compose.yml`](docker-compose.yml)<br>• Sample requests: [`api/postman/`](api/postman/) & [`api/curl/`](api/curl/)<br>• Single consolidated doc: [**`DOCUMENTATION.md`**](DOCUMENTATION.md) | Single master markdown file adhering strictly to Guideline 3. |
 | **Bonus Points** | • Advanced search features (fuzzy search, faceted search, highlighting)<br>• Demonstrating blue-green deployment strategy<br>• Including performance benchmarks from prototype<br>• Showing cost optimization strategies for cloud deployment<br>• Contributing to relevant open source projects | • Advanced search: Implemented in [`OpenSearchAdapter.java`](backend/src/main/java/com/deeprunner/docsearch/search/OpenSearchAdapter.java) & UI [`SearchTab.tsx`](frontend/src/components/SearchTab.tsx)<br>• Blue-green aliasing: §2.6<br>• Performance benchmarks: §2.5<br>• Cost optimization: §2.1 (Searchable snapshots, Graviton)<br>• Open source & experience: §3.1 & §3.5 | Highlighted query terms in `<em>`, fuzzy typo tolerance, tag aggregations, and zero-downtime index alias swapping. |
 | **Operational Caveats & Notes** | • Focus on architectural thinking over complete implementation<br>• Mock external dependencies where appropriate to save time<br>• Document assumptions clearly with consequences | [**`DOCUMENTATION.md` Section 5**](#5-assumptions--operational-boundaries): 12 explicit assumptions with "if wrong" operational and architectural impact analysis. | Complete transparency on prototype scope vs production deployment. |
@@ -439,59 +439,61 @@ To stay within the 21.6-minute monthly budget, component failure contributions a
 # 3. Enterprise Experience Showcase
 
 ## 3.1 A Similar Distributed System Built & Its Scale/Impact
+**UKG AuthN Migration Platform (80,000+ Enterprise Customers)**
 
-At a prior enterprise SaaS organization, I served as the Lead Distributed Systems Engineer designing and delivering a multi-tenant audit log and document discovery service for over 1,200 enterprise customers. The system ingested event streams from 40+ microservices, providing real-time compliance search, faceted filtering, and legal-hold exports. The platform was built with Spring Boot microservices, Kafka for event ingestion, PostgreSQL as the immutable metadata store, and an OpenSearch cluster of 24 data nodes (AWS c5.4xlarge) backed by an in-memory Redis cluster.
+I work on UKG’s AuthN migration platform, which coordinates enterprise authentication and identity migrations for more than 80,000 enterprise customers. A critical distributed workflow in this architecture connects the **Pre-Migration Scheduler (PMS)** and **Migration Tool (MT)** across Kubernetes microservices using Apache Kafka request and response events. 
 
-The system scaled from zero to over **120 million documents indexed daily**, sustaining **3,500 indexing writes/sec** and **1,800 concurrent search queries/sec** during peak reporting periods. Prior to the redesign, compliance queries routinely timed out (p95 > 4.2 seconds). By implementing shard routing keyed by tenant ID, query-time filter contexts, and composite generation caching in Redis, we achieved a **p95 search latency of 185 ms and p99 of 410 ms**, well within our 500 ms SLA. This capability enabled the company to close two Fortune 50 compliance deals representing $3.2M in annual contract value.
-
-*What I would do differently now:* We initially partitioned OpenSearch indices on a monthly calendar cadence without tenant size awareness. A single hyper-scale tenant representing 18% of global volume created heavy hotspotting on specific shards. I would implement automated tenant tiering earlier, routing enterprise "whale" tenants to dedicated indices with distinct refresh intervals rather than co-locating them on shared indices.
+In its initial design, request-response reply handling was tightly coupled to individual service instances. I helped engineer a major reliability overhaul by completely decoupling reply handling from specific service pods, introducing distributed correlation IDs, and enforcing idempotent consumer processing across all migration event topics. By decoupling instance affinity from event processing and ensuring at-least-once message delivery with safe replay semantics, the platform achieved approximately **99.9% event delivery reliability** across large-scale enterprise customer migrations.
 
 ---
 
 ## 3.2 A Performance Optimization Yielding Significant Improvements
+**Automation of the Migration Operations Workflow (90% Manual Effort Reduction)**
 
-During a Q4 holiday load test, our document indexing pipeline experienced severe latency degradation: indexing throughput dropped by 65%, API p95 response times spiked from **220 ms to 1.8 seconds**, and database CPU utilization on the PostgreSQL primary reached 92%. A Datadog APM trace alerted us to connection pool starvation, but the root cause was masked by cascading timeouts.
+Prior to optimization, the migration operations workflow required continuous, repetitive manual intervention: operations and engineering teams had to execute repeated manual status checks, verify intermediate state flags, and manually trigger stage updates for migrating customer batches. This created severe operational drag—batch migrations took hours to process, human variance caused inconsistent throughput, and engineering capacity was consumed by routine verification toil.
 
-To diagnose the bottleneck, I used **async-profiler** to capture CPU and allocation flame graphs on the JVM, coupled with PostgreSQL **`EXPLAIN (ANALYZE, BUFFERS)`** and **`pg_stat_statements`**. Profiling revealed that an un-indexed query in our transactional outbox relay was executing a full table scan on every 1-second poll. Furthermore, high write volume had generated millions of dead tuples in the outbox table because PostgreSQL's default `autovacuum_vacuum_scale_factor` (0.20) required 20% table churn before triggering cleanup. The relay spent 85% of its time walking dead heap pages.
+I designed and automated the end-to-end migration operations workflow, replacing manual touchpoints with automated validation gates, event-driven state transitions, and self-healing background reconciliation loops. 
 
-I resolved the issue with three coordinated changes:
-1. Created a partial B-tree index on `(status, id) WHERE status = 'PENDING'` to reduce the scan to a constant-time index seek.
-2. Tuned table storage parameters with `ALTER TABLE outbox_events SET (autovacuum_vacuum_scale_factor = 0.01)` to force aggressive vacuuming of completed outbox rows.
-3. Switched transaction acquisition to `SELECT ... FOR UPDATE SKIP LOCKED`, eliminating row-lock contention across concurrent API nodes.
-
-**The result:** Database CPU dropped immediately from **92% to 18%**, outbox drain latency dropped from **1,450 ms to 8 ms**, and overall API p95 latency recovered to **165 ms**. To ensure this could never silently reoccur, I added a Prometheus alert on `pg_stat_user_tables.n_dead_tup` and introduced a CI test validating that all outbox and entity queries maintain index-only or index-scan execution plans.
+**The result:**
+- **90% reduction in manual effort**: Routine operational verification checks were eliminated entirely.
+- **Processing time collapsed from hours to minutes**: Batch migration validation and execution transitioned from asynchronous human wait-time to sub-minute automated pipelines.
+- **Operational focus shifted**: Teams were relieved of routine processing to focus exclusively on investigating true migration anomalies and edge-case exceptions.
 
 ---
 
 ## 3.3 A Critical Production Incident Resolved in a Distributed System
+**Resolution of Kubernetes Rolling Restart Race Condition via Shared State**
 
-At 14:15 UTC on a Tuesday, an automated PagerDuty SEV-1 alert fired: search error rates across our European region had spiked from 0.05% to **38.4%**, affecting approximately 350 enterprise tenants. The initial alert attributed the failure to OpenSearch socket timeouts. However, the search cluster itself showed green health and normal CPU.
+During Kubernetes rolling restarts and automated deployment cutovers, we encountered a severe production failure mode: customer migrations intermittently stalled in a hanging state, requiring manual operational triage and restart.
 
-As Incident Commander, I stepped through our distributed tracing spans in OpenTelemetry. Within 6 minutes, I identified that the latency spike was originating in the Redis caching layer: the primary Redis node had experienced a network blip and failed over, but the client connection pool became blocked waiting on socket read timeouts of 10,000 ms. Because the search service synchronously waited for the cache before querying OpenSearch, the blocked cache threads rapidly exhausted the application thread pool, causing incoming search requests to queue and time out.
+**Root Cause Analysis:**
+Tracing the distributed Kafka events revealed an asynchronous race condition between container lifecycle events and event consumption:
+1. When a response event arrived from the Migration Tool (MT), it was consumed by an older Pre-Migration Scheduler (PMS) pod that had already received a `SIGTERM` and was in the process of draining before shutdown.
+2. The terminating pod consumed and discarded the Kafka message, while the newly scheduled replacement pod waited indefinitely in pod-local memory for that same response.
+3. Because the reply coordination state was held strictly in pod-local memory, the arrival of the response event on the terminating container orphaned the in-flight migration.
 
-**Mitigation vs. Systemic Fix:**
-- *Immediate Mitigation (14:32 UTC):* I updated the dynamic Spring configuration to set the Redis circuit breaker to open, forcing the application to bypass the cache entirely and serve queries directly from OpenSearch. Error rates immediately dropped back to 0.1%, restoring customer search capabilities within 17 minutes of triage.
-- *Root Cause & Systemic Fix:* The cache client had been configured as a fatal dependency with blocking timeouts. Over the subsequent sprint, I redesigned the Redis adapter to be strictly **non-fatal and fail-open**: command timeouts were slashed from 10s to 50ms, and all Redis exceptions were trapped to fall through to the origin without propagating errors to the caller. We also decoupled the rate limiter to use a local in-process token-bucket fallback during cache outages.
-
-Our postmortem established a new architectural standard across all services: *a caching layer exists to accelerate traffic; it must never possess the structural capability to bring down the system it protects.*
+**Mitigation & Systemic Architectural Fix:**
+I led the effort to extract reply coordination state completely out of pod-local memory and migrate it into a **shared, Redis-backed state store**:
+- When the Migration Tool emits a reply, the consuming PMS instance writes the response payload and status into Redis, keyed by the request's unique `correlation_id` with an explicit TTL.
+- The active replacement PMS pod queries the shared Redis store upon polling or readiness check, retrieves the response state regardless of which pod originally initiated the request or consumed the message, and continues migration processing without interruption.
+- This decoupled container lifecycles from workflow state, eliminating hung migrations during rolling deployments and establishing zero-downtime release safety.
 
 ---
 
 ## 3.4 An Architectural Decision Balancing Competing Concerns
+**State Coordination for Asynchronous Workflows: Shared Redis vs. In-Memory vs. Database**
 
-When designing the tenancy model for our document search service, we faced a major architectural dilemma: **Dedicated Index-per-Tenant vs. Shared Index with Shard Routing**.
+When designing the state coordination mechanism for the Pre-Migration Scheduler (PMS) and Migration Tool (MT) asynchronous request-response workflow, we evaluated three architectural alternatives to balance latency, operational overhead, and lifecycle safety:
 
-The product and security teams strongly favored **Index-per-Tenant**. Their argument was intuitive: physical data separation eliminates any possibility of cross-tenant query leakage, allows per-tenant snapshot restorations, and permits custom per-tenant analyzers for international language support.
-
-However, from a distributed systems perspective, the math at scale made index-per-tenant untenable. With our target of 2,000+ enterprise tenants and standard 2 primary shards plus 1 replica per index, the cluster would have required over **8,000 active Lucene shards**. OpenSearch cluster-state metadata updates degrade sharply when shard counts exceed 10,000; master node heap memory becomes dominated by shard routing tables; and each idle shard consumes 20–30 MB of heap for Lucene segment memory, burning gigabytes of RAM on dormant tenants.
-
-I made the decision to adopt a **Single Shared Index with Mandatory Shard Routing (`routing=tenantId`)**, defended by four deterministic security boundaries:
-1. Centralized query construction via a factory that enforces a non-scoring `filter` clause on `tenantId`.
-2. Composite Lucene `_id` values (`{tenantId}:{documentId}`) preventing ID collisions.
-3. OpenSearch index mapping setting `_routing: { required: true }`, ensuring the engine itself rejects unrouted writes.
-4. Per-tenant token-bucket rate limiting to eliminate noisy-neighbor starvation.
-
-*How the decision aged:* Twelve months after deployment, the cluster managed 1,800 active tenants across just 12 primary shards. Cluster stability remained pristine with 99.98% uptime, and master node heap never exceeded 35%. When a large enterprise customer signed with strict GDPR isolation demands, our architectural escalation path allowed us to route that specific tenant to a dedicated index via `IndexNaming` without refactoring our query pipelines or entity models.
+1. **In-Memory State Handling**:
+   - *Pros*: Simplest design, lowest latency, zero external infrastructure overhead.
+   - *Cons*: Tied in-flight request state directly to the lifecycle of an individual pod, directly causing the rolling restart race condition and stalled customer workflows.
+2. **Relational Database Storage**:
+   - *Pros*: ACID guarantees and persistent durability.
+   - *Cons*: High write amplification, connection pool contention, and substantial autovacuum/cleanup churn for temporary coordination records that only need to exist for seconds.
+3. **Shared Redis-Backed State (Chosen Decision)**:
+   - *Rationale*: Redis provided shared, sub-millisecond in-memory state that seamlessly survived pod terminations and Kubernetes node rebalancing. Native key expiration (TTL) ensured automatic garbage collection of temporary coordination entries without database bloat.
+   - *Reliability Controls*: We paired this choice with correlation IDs, atomic Redis operations (`SETNX` / Lua scripts), and idempotent message consumer handlers, guaranteeing that Kafka retries and duplicate events could be safely absorbed without side effects.
 
 ---
 
@@ -499,10 +501,10 @@ I made the decision to adopt a **Single Shared Index with Mandatory Shard Routin
 
 | Enterprise Experience | Concrete Implementation in this Prototype |
 |---|---|
-| **Multi-Tenant Shard Routing (§3.1)** | Shared index with `routing=tenantId` in `OpenSearchAdapter` and `OpenSearchQueryFactory` ([ADR-0003](docs/adr/adr-0003-shared-index-tenant-routing.md)) |
-| **Outbox Indexing & Vacuuming (§3.2)** | Partial index on `(status, id) WHERE status = 'PENDING'` and `autovacuum_vacuum_scale_factor = 0.01` in [V3__init_outbox.sql](backend/src/main/resources/db/migration/V3__init_outbox.sql) |
-| **Redis Fail-Open Incident (§3.3)** | Non-fatal Redis health indicator and `InProcessFallbackRateLimiter` in [RedisRateLimiter.java](backend/src/main/java/com/deeprunner/docsearch/service/RedisRateLimiter.java) |
-| **Architectural Trade-Off Analysis (§3.4)** | 4-layer isolation model with ArchUnit rules in [ArchitectureTest.java](backend/src/test/java/com/deeprunner/docsearch/architecture/ArchitectureTest.java) |
+| **Kafka Asynchronous Request-Reply & Correlation IDs (§3.1)** | Decoupled asynchronous indexing via Transactional Outbox pattern ([ADR-0005](docs/adr/adr-0005-transactional-outbox-relay.md)) with `X-Request-Id` distributed MDC correlation tracking across proxy, API, and storage layers. |
+| **Workflow Automation & Verification (§3.2)** | Fully automated developer and evaluator workflow: preflight environment verification ([`scripts/preflight.sh`](scripts/preflight.sh)), automated corpus seeding ([`scripts/seed.sh`](scripts/seed.sh)), and automated smoke test assertions ([`scripts/verify.sh`](scripts/verify.sh)). |
+| **Stateless API & Shared Redis State (§3.3)** | Stateless Spring Boot API nodes: All session, rate-limiting token buckets, and query caching reside in shared Redis L2 storage ([ADR-0004](docs/adr/adr-0004-redis-caching-and-rate-limiting.md)), ensuring instances can be dynamically scaled, restarted, or terminated without losing client state. |
+| **Storage Separation for Transient vs Durable Data (§3.4)** | Clean architectural separation: PostgreSQL as the durable source of truth ([ADR-0002](docs/adr/adr-0002-postgresql-source-of-truth.md)) and Redis for transient, low-latency rate limits and cache invalidations with TTL expiry ([ADR-0004](docs/adr/adr-0004-redis-caching-and-rate-limiting.md)). |
 
 ---
 
@@ -523,7 +525,7 @@ The prototype and architecture were developed with the assistance of **Antigravi
 4. **Hardcoded Credentials Security Finding**: Generated YAML configurations initially included inline database passwords. The pre-commit security hook flagged this; corrected by strictly externalizing all secrets to `.env` variables and environment bindings.
 
 ## 4.4 Non-Delegated Engineering Judgments
-- **Enterprise Experience Showcase**: All distributed systems experience narratives, incident postmortems, flame-graph profiling anecdotes, and performance optimizations reflect authentic first-hand engineering background.
+- **Enterprise Experience Showcase**: All distributed systems experience narratives (UKG AuthN migration platform, Kafka asynchronous request-reply decoupling across 80,000+ enterprise tenants, Kubernetes rolling restart incident resolution, and shared Redis coordination) reflect authentic first-hand enterprise engineering background.
 - **Tenant Isolation Enforcement Strategy**: The decision to enforce fail-closed tenancy alongside fail-open caching, as well as returning HTTP 404 rather than 403 on cross-tenant document requests.
 - **Shard Capacity & Sizing Mathematics**: Derived from first principles based on Lucene segment dynamics, OS page caching behavior, and memory-to-disk ratios.
 

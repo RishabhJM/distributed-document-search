@@ -4,13 +4,12 @@ import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import SearchTab from "@/components/SearchTab";
 import IndexTab from "@/components/IndexTab";
-import HealthTab from "@/components/HealthTab";
 import DocModal, { DocDetail } from "@/components/DocModal";
-import { Search, FilePlus, BarChart3 } from "lucide-react";
+import { Search, FilePlus } from "lucide-react";
 
 export default function Home() {
   const [currentTenant, setCurrentTenant] = useState<string>("acme");
-  const [activeTab, setActiveTab] = useState<"search" | "index" | "metrics">("search");
+  const [activeTab, setActiveTab] = useState<"search" | "index">("search");
   const [selectedDoc, setSelectedDoc] = useState<DocDetail | null>(null);
 
   const handleTenantChange = (newTenant: string) => {
@@ -70,18 +69,6 @@ export default function Home() {
               <FilePlus className="w-3.5 h-3.5" />
               <span>Document Studio</span>
             </button>
-
-            <button
-              onClick={() => setActiveTab("metrics")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === "metrics"
-                  ? "bg-zinc-800 text-zinc-100 shadow-sm border border-zinc-700/60"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40"
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Metrics &amp; Tradeoffs</span>
-            </button>
           </div>
 
           {/* Quick Context Indicator */}
@@ -108,10 +95,6 @@ export default function Home() {
               // Optionally switch to search or notify
             }}
           />
-        )}
-
-        {activeTab === "metrics" && (
-          <HealthTab currentTenant={currentTenant} />
         )}
       </main>
 

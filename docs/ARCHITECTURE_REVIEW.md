@@ -2,7 +2,7 @@
 
 > **System**: Distributed Multi-Tenant Document Search Service  
 > **Engineering Scope**: 10M+ documents capacity, sub-500ms p95 search latency, 1,000+ searches/second, and strict multi-tenant data isolation.  
-> **Primary References**: [ADR Directory](adr/), [Production Readiness & Scale Math](production-readiness.md), [Execution & Verification Guide](../RUN.md), [Root README](../README.md).
+> **Primary References**: [Master Submission Documentation](../DOCUMENTATION.md), [ADR Directory](adr/), [Execution & Verification Guide](../RUN.md), [Root README](../README.md).
 
 ---
 
@@ -73,10 +73,10 @@ The stack was chosen based on specific scale, latency, and isolation requirement
 | Component | Selected Technology | Role | Key Architectural Trade-off |
 | :--- | :--- | :--- | :--- |
 | **Backend Framework** | **Java 21 / Spring Boot 3.3.5** | Core Business API & Outbox Relay | Uses Java 21 **Virtual Threads** (`spring.threads.virtual.enabled=true`) for high-concurrency non-blocking I/O without reactive complexity. |
-| **Source of Truth** | **PostgreSQL 16** | ACID Documents & Transactional Outbox | Guarantees atomic document creation and outbox event logging in a single ACID transaction. Eliminates dual-write split-brain risk ([ADR-0002](adr/adr2.md)). |
-| **Full-Text Retrieval** | **OpenSearch 2.18** | Derived Inverted Index & BM25 Scoring | Shard routing via `routing=tenantId` directs queries to **1 shard instead of N**. Sub-100ms relevance retrieval with highlighting ([ADR-0001](adr/adr1.md), [ADR-0003](adr/adr3.md)). |
-| **Cache & Rate Limiting** | **Redis 7.4** | L2 Query Cache & Lua Token Buckets | Atomic Lua token buckets prevent race conditions under load. $O(1)$ search cache invalidation via generation counters ([ADR-0004](adr/adr4.md)). |
-| **Front-End Proxy & UI** | **Next.js 15 (App Router)** | Client UI & Security Boundary | Route-handler proxy (`/api/[...path]`) injects tenant ID from `httpOnly` cookie; browser JavaScript never holds authorization credentials ([ADR-0006](adr/adr6.md)). |
+| **Source of Truth** | **PostgreSQL 16** | ACID Documents & Transactional Outbox | Guarantees atomic document creation and outbox event logging in a single ACID transaction. Eliminates dual-write split-brain risk ([ADR-0002](adr/adr-0002-postgresql-source-of-truth.md)). |
+| **Full-Text Retrieval** | **OpenSearch 2.18** | Derived Inverted Index & BM25 Scoring | Shard routing via `routing=tenantId` directs queries to **1 shard instead of N**. Sub-100ms relevance retrieval with highlighting ([ADR-0001](adr/adr-0001-opensearch-search-engine.md), [ADR-0003](adr/adr-0003-shared-index-tenant-routing.md)). |
+| **Cache & Rate Limiting** | **Redis 7.4** | L2 Query Cache & Lua Token Buckets | Atomic Lua token buckets prevent race conditions under load. $O(1)$ search cache invalidation via generation counters ([ADR-0004](adr/adr-0004-redis-caching-and-rate-limiting.md)). |
+| **Front-End Proxy & UI** | **Next.js 15 (App Router)** | Client UI & Security Boundary | Route-handler proxy (`/api/[...path]`) injects tenant ID from `httpOnly` cookie; browser JavaScript never holds authorization credentials ([ADR-0006](adr/adr-0006-nextjs-route-handler-proxy.md)). |
 
 ---
 
@@ -497,9 +497,96 @@ flowchart TD
 
 ---
 
-## 5. Graphical Metrics, Benchmarks & Architectural Trade-offs
+### Flow 9: The Triad Coordination Lifecycle (PostgreSQL, OpenSearch & Redis)
 
-The Metrics & Diagnostics tab in the Web UI provides visual comparisons of system performance and architectural trade-offs:
+Demonstrates the unified end-to-end synergy between **PostgreSQL 16** (Source of Truth), **OpenSearch 2.18** (Derived Inverted Index), and **Redis 7.4** (Multi-Tier Caching & Invalidation Layer) across write, search, and deep-read operations.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Controller as Document/Search Controller
+    participant Service as Business Services (Doc/Search)
+    participant Postgres as PostgreSQL 16 (Source of Truth)
+    participant OpenSearch as OpenSearch 2.18 (Derived Index)
+    participant Redis as Redis 7.4 (Cache & Invalidation)
+
+    Note over Client,Redis: Phase 1: Write Path — ACID Ingestion, Search Indexing & O(1) Invalidation
+    Client->>Controller: POST /documents (X-Tenant-ID: acme)<br/>{"title":"Q3 Payroll","content":"..."}
+    Controller->>Service: createDocument("acme", payload)
+    
+    rect rgb(240, 248, 255)
+        Note over Service,Postgres: Single ACID Transaction (@Transactional)
+        Service->>Postgres: INSERT INTO documents (id, tenant_id, title, content, ...)<br/>INSERT INTO outbox_events (..., status='PENDING')
+        Postgres-->>Service: Commit OK (Durable Source of Truth)
+    end
+
+    Service->>OpenSearch: PUT /documents-live/_doc/acme:{id}?routing=acme
+    OpenSearch-->>Service: HTTP 201 Created (Indexed in tenant shard)
+    Service->>Postgres: UPDATE outbox_events SET status='PROCESSED'
+    
+    Service->>Redis: DEL doc:v1:acme:{id}<br/>INCR searchgen:v1:acme
+    Redis-->>Service: OK (Search generation bumped: 4 -> 5)
+    Service-->>Controller: DocumentResponse (indexingState: INDEXED)
+    Controller-->>Client: HTTP 201 Created
+
+    Note over Client,Redis: Phase 2: Search Path — Generation-Aware Cache & Shard-Routed BM25
+    Client->>Controller: GET /search?q=payroll&highlight=true (X-Tenant-ID: acme)
+    Controller->>Service: search("acme", query="payroll", ...)
+    
+    Service->>Redis: GET searchgen:v1:acme (returns "5")
+    Service->>Redis: GET search:v1:acme:gen5:{queryHash}
+    Redis-->>Service: null (L2 Cache Miss: gen4 results abandoned)
+
+    Service->>OpenSearch: POST /documents-live/_search?routing=acme<br/>{query: {bool: {must: [BM25 multi_match], filter: [{term: {tenantId: "acme"}}]}}}
+    OpenSearch-->>Service: SearchHits (doc IDs, scores, highlighted snippets in <em>)
+    Service->>Redis: SETEX search:v1:acme:gen5:{queryHash} 60s {results}
+    Service-->>Controller: SearchResultDto (tookMs: ~74ms, cached: false)
+    Controller-->>Client: HTTP 200 OK (Search Results)
+
+    Note over Client,Redis: Phase 3: Detail Read Path — L1 Cache Miss & Strongly Consistent Read
+    Client->>Controller: GET /documents/{id} (X-Tenant-ID: acme)
+    Controller->>Service: getDocument("acme", id)
+    
+    Service->>Redis: GET doc:v1:acme:{id}
+    Redis-->>Service: null (L1 Cache Miss: evicted during Phase 1)
+
+    Service->>Postgres: SELECT * FROM documents<br/>WHERE tenant_id = 'acme' AND id = {id} AND deleted_at IS NULL
+    Postgres-->>Service: DocumentEntity (Full author, tags, content, timestamps)
+    Service->>Redis: SETEX doc:v1:acme:{id} 300s {doc}
+    Service-->>Controller: DocumentResponse (tookMs: ~12ms)
+    Controller-->>Client: HTTP 200 OK (Authoritative Full Document)
+```
+
+#### Step-by-Step Walkthrough:
+
+1. **Phase 1: Write Path Coordination (PostgreSQL $\rightarrow$ OpenSearch $\rightarrow$ Redis)**:
+   - **PostgreSQL (ACID Durability)**: The document and its corresponding outbox record commit in a single ACID transaction via [`DocumentService.createDocumentInTx`](../backend/src/main/java/com/deeprunner/docsearch/service/DocumentService.java). PostgreSQL acts as the uncompromised source of truth.
+   - **OpenSearch (Derived Index Update)**: The service synchronizes the document directly to the tenant's dedicated shard using `PUT /documents-live/_doc/acme:{id}?routing=acme`.
+   - **Redis (Instant $O(1)$ Invalidation)**: The service executes two atomic operations:
+     1. Evicts the document cache: `DEL doc:v1:acme:{id}`.
+     2. Bumps the tenant's generation counter: `INCR searchgen:v1:acme`. This instantly invalidates all cached search queries for that tenant without expensive keyspace scanning.
+
+2. **Phase 2: Search Path Coordination (Redis $\rightarrow$ OpenSearch $\rightarrow$ Redis)**:
+   - **Redis (Generation Check & Cache Lookup)**: [`SearchService`](../backend/src/main/java/com/deeprunner/docsearch/service/SearchService.java) queries Redis for generation `searchgen:v1:acme` (now `5`). It looks for `search:v1:acme:gen5:{queryHash}`. Because the generation was incremented in Phase 1, any previously cached results under `gen4` are bypassed, resulting in a cache miss.
+   - **OpenSearch (BM25 Retrieval & Highlighting)**: The query executes against OpenSearch using `routing=acme` (confined to 1 shard) and `filter: [{ term: { tenantId: "acme" } }]`. OpenSearch applies BM25 scoring with field boosts (`title^3, tags^2, author^1.5, content^1`) and generates snippets wrapped in `<em class="search-hl">`.
+   - **Redis (Cache Population with Jitter)**: The fresh search result is written to Redis under the `gen5` key with a jittered TTL (48–72s) to prevent cache stampedes.
+
+3. **Phase 3: Detail Read Path Coordination (Redis $\rightarrow$ PostgreSQL $\rightarrow$ Redis)**:
+   - **Redis (L1 Document Cache Check)**: When a user selects a search result to view the entire raw document, `GET /documents/{id}` checks `doc:v1:acme:{id}` in Redis. Since Phase 1 evicted this key, it results in an L1 cache miss.
+   - **PostgreSQL (Authoritative Hydration)**: The service reads directly from PostgreSQL with tenant isolation: `SELECT * FROM documents WHERE tenant_id = 'acme' AND id = {id} AND deleted_at IS NULL`.
+   - **Redis (L1 Repopulation)**: The retrieved entity is cached in Redis with a 300-second TTL (`SETEX doc:v1:acme:{id} 300 {doc}`), ensuring subsequent reads execute in sub-millisecond time.
+
+| Component | Architecture Tier | Primary Responsibility in the Triad | Failure Behavior |
+| :--- | :--- | :--- | :--- |
+| **PostgreSQL 16** | **System of Record** | ACID durability, transactional outbox logging, strongly consistent reads (`GET /documents/{id}`). | **Fail Closed (Fatal)**: Ingestion or direct reads halt if DB is down. |
+| **OpenSearch 2.18** | **Derived Inverted Index** | Shard-routed BM25 scoring, term vectors, query highlighting, and multi-field relevance. | **Asymmetric**: Writes succeed via PENDING outbox; Search opens circuit breaker (503). |
+| **Redis 7.4** | **Acceleration & State** | $O(1)$ tenant generation counters, L2 search query cache, L1 document cache, Lua rate limiting. | **Fail Open (Non-Fatal)**: Bypasses cache directly to OpenSearch / PostgreSQL. |
+
+
+---
+
+## 5. Graphical Metrics, Benchmarks & Architectural Trade-offs
 
 ### 5.1 Vector Latency Benchmark Comparison
 
@@ -657,7 +744,7 @@ All source code is cleanly separated across decoupled packages:
 | **Search Engine Engine** | [`OpenSearchAdapter`](../backend/src/main/java/com/deeprunner/docsearch/search/OpenSearchAdapter.java)<br>[`OpenSearchQueryFactory`](../backend/src/main/java/com/deeprunner/docsearch/search/OpenSearchQueryFactory.java)<br>[`OpenSearchConfig`](../backend/src/main/java/com/deeprunner/docsearch/search/OpenSearchConfig.java) | Index lifecycle initialization, shard routing injection, BM25 query construction, snippet highlighting. |
 | **Rate Limiting Engine** | [`RedisRateLimiter`](../backend/src/main/java/com/deeprunner/docsearch/service/RedisRateLimiter.java)<br>[`InProcessFallbackRateLimiter`](../backend/src/main/java/com/deeprunner/docsearch/service/InProcessFallbackRateLimiter.java) | Distributed Lua token bucket execution with automatic local fallback when Redis is unreachable. |
 | **Data Repositories** | [`DocumentRepository`](../backend/src/main/java/com/deeprunner/docsearch/repository/DocumentRepository.java)<br>[`OutboxEventRepository`](../backend/src/main/java/com/deeprunner/docsearch/repository/OutboxEventRepository.java)<br>[`TenantRepository`](../backend/src/main/java/com/deeprunner/docsearch/repository/TenantRepository.java) | Strictly tenanted Spring Data JPA interfaces; native query outbox polling (`SKIP LOCKED`). |
-| **Front-End Next.js UI** | [`route.ts`](../frontend/src/app/api/%5B...path%5D/route.ts)<br>[`page.tsx`](../frontend/src/app/page.tsx)<br>[`SearchTab.tsx`](../frontend/src/components/SearchTab.tsx)<br>[`IndexTab.tsx`](../frontend/src/components/IndexTab.tsx)<br>[`HealthTab.tsx`](../frontend/src/components/HealthTab.tsx)<br>[`DocModal.tsx`](../frontend/src/components/DocModal.tsx) | Secure proxy route handler, Spotlight command-bar search, document studio with outbox visualizer, interactive tradeoffs scorecard. |
+| **Front-End Next.js UI** | [`route.ts`](../frontend/src/app/api/%5B...path%5D/route.ts)<br>[`page.tsx`](../frontend/src/app/page.tsx)<br>[`SearchTab.tsx`](../frontend/src/components/SearchTab.tsx)<br>[`IndexTab.tsx`](../frontend/src/components/IndexTab.tsx)<br>[`DocModal.tsx`](../frontend/src/components/DocModal.tsx) | Secure proxy route handler, Spotlight command-bar search, document studio with outbox visualizer. |
 
 ---
 

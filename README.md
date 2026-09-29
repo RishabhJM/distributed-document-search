@@ -3,6 +3,7 @@
 A multi-tenant full-text document search platform engineered for **10M+ documents**, **sub-500ms p95 latency**, **1,000+ searches/second**, and strict **tenant data isolation**.
 
 > 🚀 **Looking to run and test immediately?** See [**`RUN.md`**](RUN.md) for complete copy-paste commands, preflight checks, test execution, and a 5-minute verification walkthrough.  
+> 🧪 **Need a complete functional testing & experience guide?** See [**`docs/FUNCTIONAL_TESTING_GUIDE.md`**](docs/FUNCTIONAL_TESTING_GUIDE.md) for exhaustive test flows across Web UI, REST API, security boundaries, rate limiting, and chaos recovery.  
 > 📖 **Need a complete architectural deep-dive?** See [**`docs/ARCHITECTURE_REVIEW.md`**](docs/ARCHITECTURE_REVIEW.md) for the master architectural review with all 8 Mermaid user flows, isolation boundaries, and failure topologies.
 
 ---
@@ -55,11 +56,11 @@ A multi-tenant full-text document search platform engineered for **10M+ document
 
 ### Core Architecture Highlights
 
-1. **PostgreSQL as Source of Truth & Outbox ([ADR-0002](docs/adr/adr2.md))**:
+1. **PostgreSQL as Source of Truth & Outbox ([ADR-0002](docs/adr/adr-0002-postgresql-source-of-truth.md))**:
    Documents and `outbox_events` commit atomically in one ACID transaction. The dual-write divergence risk is structurally eliminated. Reads by ID (`GET /documents/{id}`) are strongly consistent read-your-writes.
-2. **OpenSearch with Mandatory Shard Routing ([ADR-0001](docs/adr/adr1.md), [ADR-0003](docs/adr/adr3.md))**:
+2. **OpenSearch with Mandatory Shard Routing ([ADR-0001](docs/adr/adr-0001-opensearch-search-engine.md), [ADR-0003](docs/adr/adr-0003-shared-index-tenant-routing.md))**:
    One shared index (`documents-live` alias) with composite IDs (`{tenant}:{uuid}`) and `routing=tenantId`. Queries hit **1 shard instead of N**, enabling sub-100ms relevance retrieval and linear horizontal scale.
-3. **Redis for Caching & Token-Bucket Rate Limiting ([ADR-0004](docs/adr/adr4.md))**:
+3. **Redis for Caching & Token-Bucket Rate Limiting ([ADR-0004](docs/adr/adr-0004-redis-caching-and-rate-limiting.md))**:
    Atomic Lua token buckets enforce per-tenant quotas. Search queries are cached using an atomic generation counter (`searchgen:v1:{tenant}`), invalidating tenant search caches in $O(1)$ time upon document writes.
 4. **Architectural Asymmetry (Fail-Closed vs Fail-Open)**:
    - **Tenant isolation FAILS CLOSED**: Missing, malformed, or unauthorized tenants receive immediate 400/403 responses.
@@ -73,18 +74,41 @@ A multi-tenant full-text document search platform engineered for **10M+ document
 - Docker & Docker Compose (or local Java 21, Maven 3.9+, Node 20+)
 - Ports available: `5432` (PostgreSQL), `9200` (OpenSearch), `6379` (Redis), `8080` (API), `3000` (Web UI)
 
-### Option A: Docker Compose (Full Stack)
+### Option A: Single Docker Command (Full Stack)
+
+Start all 5 containers (PostgreSQL 16, OpenSearch 2.18, Redis 7.4, Spring Boot API, and Next.js Frontend) with a single command:
 
 ```bash
-# 1. Copy environment template
-cp .env.example .env
+docker compose --profile full up --build -d
+```
+*(Omit `-d` if you prefer to stream all container logs in your terminal).*
 
-# 2. Start full multi-service topology (Postgres, OpenSearch, Redis, Spring Boot API, Next.js UI)
+> [!NOTE]
+> **Why `--profile full` is needed:** In [`docker-compose.yml`](docker-compose.yml), the `api` and `frontend` services are assigned to `profiles: ["full"]`. Without `--profile full`, running `docker compose up` will start only the backing datastores (PostgreSQL, OpenSearch, and Redis).
+
+#### Access Points
+- **Web UI:** [http://localhost:3000](http://localhost:3000)
+- **API Health Check:** [http://localhost:8080/health](http://localhost:8080/health)
+- **Actuator Prometheus Metrics:** [http://localhost:8080/actuator/prometheus](http://localhost:8080/actuator/prometheus)
+- **OpenSearch Cluster:** [http://localhost:9200](http://localhost:9200)
+
+#### Seed Sample Data & Teardown
+```bash
+# Seed initial sample documents for multiple tenants (once healthy, ~45s):
+./scripts/seed.sh
+
+# Stop and remove all containers:
+docker compose --profile full down
+
+# Stop and reset all database & index volumes:
+docker compose --profile full down -v
+```
+
+*Alternatively, use the automated startup script which launches Docker, polls health checks, and seeds data in one step:*
+```bash
 ./scripts/up.sh -Mode full -Seed
 # On Windows PowerShell: .\scripts\up.ps1 -Mode full -Seed
 ```
-- **Web UI:** [http://localhost:3000](http://localhost:3000)
-- **API Swagger/Health:** [http://localhost:8080/health](http://localhost:8080/health)
 
 ### Option B: Local Development
 
@@ -106,7 +130,7 @@ npm run dev
 
 ## 3. Five-Minute Interactive Demo
 
-Follow the 6 steps documented in [docs/demo.md](docs/demo.md) to verify all key architectural claims:
+Follow the 6 steps below (or see [RUN.md](RUN.md) and [docs/FUNCTIONAL_TESTING_GUIDE.md](docs/FUNCTIONAL_TESTING_GUIDE.md)) to verify all key architectural claims:
 
 ### 1. Fast Full-Text Search with BM25 & Highlights
 - Open [http://localhost:3000](http://localhost:3000), select tenant **`acme`**, and search **`payroll runbook`**.
@@ -236,12 +260,10 @@ The build verifies strict architectural invariants in [ArchitectureTest.java](ba
 
 ---
 
-## 6. Project Documentation Directory (`docs/`)
+## 6. Project Documentation
 
-- [docs/architecture.md](docs/architecture.md): Complete high-level architecture document, data flow diagrams, and isolation layers.
-- [docs/production-readiness.md](docs/production-readiness.md): Production readiness analysis, 100x scale calculations (1B docs / 100k qps), Resilience4j configurations, and 99.95% SLA arithmetic.
-- [docs/experience.md](docs/experience.md): Enterprise experience showcase covering high-scale distributed systems, performance profiling, production incidents, and architectural trade-offs.
-- [docs/assumptions.md](docs/assumptions.md): Explicit assumptions, scope boundaries, and operational impact analysis.
-- [docs/demo.md](docs/demo.md): Step-by-step 5-minute evaluation walkthrough.
-- [docs/ai-tool-usage.md](docs/ai-tool-usage.md): Honest disclosure of AI tooling, prompts, corrections, and human oversight.
-- [docs/adr/](docs/adr/): Architectural Decision Records (OpenSearch, PostgreSQL, Shard Routing, Redis, Outbox Relay, Next.js Route Proxy).
+- [**`DOCUMENTATION.md`**](DOCUMENTATION.md): Master submission documentation consolidating Architecture Design, Production Readiness Analysis (100x scale, Resilience, Security, Observability, SLA), Enterprise Experience Showcase, AI Tool Usage, and Assumptions.
+- [**`docs/ARCHITECTURE_REVIEW.md`**](docs/ARCHITECTURE_REVIEW.md): Master architectural review with sequence diagrams for all 8 user and system flows.
+- [**`docs/FUNCTIONAL_TESTING_GUIDE.md`**](docs/FUNCTIONAL_TESTING_GUIDE.md): Complete functional testing guide covering Web UI, REST API, security, rate limiting, chaos, and automated suites.
+- [**`docs/adr/`**](docs/adr/): Architectural Decision Records (OpenSearch, PostgreSQL, Shard Routing, Redis, Outbox Relay, Next.js Route Proxy).
+- [**`RUN.md`**](RUN.md): Step-by-step service execution, preflight checks, and end-to-end smoke verification.

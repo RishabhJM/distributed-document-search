@@ -46,7 +46,7 @@ async function handleProxy(
   // Read tenant from cookie or header (authoritative inject)
   const tenantCookie = request.cookies.get("tenant_id")?.value;
   const clientTenantHeader = request.headers.get("X-Tenant-ID");
-  const tenantId = tenantCookie || clientTenantHeader || "acme";
+  const tenantId = tenantCookie || clientTenantHeader || "";
 
   const headers: Record<string, string> = {
     "X-Tenant-ID": tenantId,

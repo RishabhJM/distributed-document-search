@@ -14,9 +14,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -102,6 +107,90 @@ public class GlobalExceptionHandler {
             "Bad Request",
             HttpStatus.BAD_REQUEST.value(),
             validationErrors,
+            "INVALID_REQUEST",
+            requestId
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(problem);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ProblemDetailsDto> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
+        log.warn("Method not allowed for request {}: {}", requestId, ex.getMessage());
+        ProblemDetailsDto problem = ProblemDetailsDto.of(
+            "method-not-allowed",
+            "Method Not Allowed",
+            HttpStatus.METHOD_NOT_ALLOWED.value(),
+            ex.getMessage(),
+            "METHOD_NOT_ALLOWED",
+            requestId
+        );
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(problem);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ProblemDetailsDto> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
+        log.warn("Media type not supported for request {}: {}", requestId, ex.getMessage());
+        ProblemDetailsDto problem = ProblemDetailsDto.of(
+            "unsupported-media-type",
+            "Unsupported Media Type",
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+            ex.getMessage(),
+            "UNSUPPORTED_MEDIA_TYPE",
+            requestId
+        );
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(problem);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ProblemDetailsDto> handleNoResourceFound(NoResourceFoundException ex) {
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
+        ProblemDetailsDto problem = ProblemDetailsDto.of(
+            "not-found",
+            "Resource Not Found",
+            HttpStatus.NOT_FOUND.value(),
+            ex.getMessage(),
+            "RESOURCE_NOT_FOUND",
+            requestId
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(problem);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ProblemDetailsDto> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
+        String detail = String.format("Parameter '%s' should be of type '%s'",
+            ex.getName(), ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
+        ProblemDetailsDto problem = ProblemDetailsDto.of(
+            "invalid-request",
+            "Bad Request",
+            HttpStatus.BAD_REQUEST.value(),
+            detail,
+            "INVALID_REQUEST",
+            requestId
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+            .body(problem);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ProblemDetailsDto> handleMissingParam(MissingServletRequestParameterException ex) {
+        String requestId = MDC.get(AppRequestContextFilter.MDC_REQUEST_ID_KEY);
+        ProblemDetailsDto problem = ProblemDetailsDto.of(
+            "invalid-request",
+            "Bad Request",
+            HttpStatus.BAD_REQUEST.value(),
+            ex.getMessage(),
             "INVALID_REQUEST",
             requestId
         );

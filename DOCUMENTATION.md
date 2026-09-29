@@ -441,7 +441,7 @@ To stay within the 21.6-minute monthly budget, component failure contributions a
 ## 3.1 A Similar Distributed System Built & Its Scale/Impact
 **UKG AuthN Migration Platform (80,000+ Enterprise Customers)**
 
-I work on UKG’s AuthN migration platform, which coordinates enterprise authentication and identity migrations for more than 80,000 enterprise customers. A critical distributed workflow in this architecture connects the **Pre-Migration Scheduler (PMS)** and **Migration Tool (MT)** across Kubernetes microservices using Apache Kafka request and response events. 
+I work on UKG’s AuthN migration platform, which coordinates enterprise authentication and identity migrations for more than 20,000 enterprise customers. A critical distributed workflow in this architecture connects the **Pre-Migration Scheduler (PMS)** and **Migration Tool (MT)** across Kubernetes microservices using Apache Kafka request and response events. 
 
 In its initial design, request-response reply handling was tightly coupled to individual service instances. I helped engineer a major reliability overhaul by completely decoupling reply handling from specific service pods, introducing distributed correlation IDs, and enforcing idempotent consumer processing across all migration event topics. By decoupling instance affinity from event processing and ensuring at-least-once message delivery with safe replay semantics, the platform achieved approximately **99.9% event delivery reliability** across large-scale enterprise customer migrations.
 
@@ -502,7 +502,7 @@ When designing the state coordination mechanism for the Pre-Migration Scheduler 
 | Enterprise Experience | Concrete Implementation in this Prototype |
 |---|---|
 | **Kafka Asynchronous Request-Reply & Correlation IDs (§3.1)** | Decoupled asynchronous indexing via Transactional Outbox pattern ([ADR-0005](docs/adr/adr-0005-transactional-outbox-relay.md)) with `X-Request-Id` distributed MDC correlation tracking across proxy, API, and storage layers. |
-| **Workflow Automation & Verification (§3.2)** | Fully automated developer and evaluator workflow: preflight environment verification ([`scripts/preflight.sh`](scripts/preflight.sh)), automated corpus seeding ([`scripts/seed.sh`](scripts/seed.sh)), and automated smoke test assertions ([`scripts/verify.sh`](scripts/verify.sh)). |
+| **Workflow Automation & Verification (§3.2)** | Fully automated developer and evaluator workflow: preflight environment verification ([`scripts/preflight.sh`](scripts/preflight.sh)), and automated smoke test assertions ([`scripts/verify.sh`](scripts/verify.sh)). |
 | **Stateless API & Shared Redis State (§3.3)** | Stateless Spring Boot API nodes: All session, rate-limiting token buckets, and query caching reside in shared Redis L2 storage ([ADR-0004](docs/adr/adr-0004-redis-caching-and-rate-limiting.md)), ensuring instances can be dynamically scaled, restarted, or terminated without losing client state. |
 | **Storage Separation for Transient vs Durable Data (§3.4)** | Clean architectural separation: PostgreSQL as the durable source of truth ([ADR-0002](docs/adr/adr-0002-postgresql-source-of-truth.md)) and Redis for transient, low-latency rate limits and cache invalidations with TTL expiry ([ADR-0004](docs/adr/adr-0004-redis-caching-and-rate-limiting.md)). |
 
